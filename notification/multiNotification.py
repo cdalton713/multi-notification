@@ -1,5 +1,5 @@
-from typing import NoReturn, Callable, Dict
-from notification.models import *
+from typing import NoReturn, Callable, Dict, Optional
+from models import FormatFunction, NotificationSettings
 from discord_webhook import DiscordWebhook
 from telegram import Bot, Chat
 from logging import Logger
