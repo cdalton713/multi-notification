@@ -1,8 +1,10 @@
-from typing import NoReturn, Callable, Dict, Optional
-from models import FormatFunction, NotificationSettings
+from logging import Logger
+from typing import NoReturn, Callable, Dict, Optional, Tuple
+
 from discord_webhook import DiscordWebhook
 from telegram import Bot, Chat
-from logging import Logger
+
+from .models import FormatFunction, NotificationSettings
 
 
 class NotificationBase:
@@ -14,9 +16,11 @@ class NotificationBase:
     def _default_format_fn(self, message: str, *args, **kwargs):
         return message
 
-    def _format(self, message: str, format_fn: Optional[FormatFunction], *args, **kwargs) -> str:
+    def _format(self, service, message: str, format_fn: Optional[FormatFunction] = None,
+                fn_args: Optional[Tuple] = None,
+                fn_kwargs: Optional[Dict] = None, *args, **kwargs) -> str:
         if format_fn:
-            return format_fn(message, *args, **kwargs)
+            return format_fn(service, message, fn_args, fn_kwargs)
         else:
             return self.default_format_fn(message, *args, **kwargs)
 
@@ -29,19 +33,24 @@ class NotificationBase:
     def _send(self, message: str, format_fn: Optional[FormatFunction] = None, *args, **kwargs) -> NoReturn:
         raise NotImplementedError
 
-    def message(self, message: str, format_fn: Optional[FormatFunction] = None, *args, **kwargs) -> NoReturn:
+    def message(self, message: str, format_fn: Optional[FormatFunction] = None, fn_args: Optional[Tuple] = None,
+                fn_kwargs: Optional[Dict] = None, *args, **kwargs) -> NoReturn:
         raise NotImplementedError
 
-    def error(self, message: str, format_fn: Optional[FormatFunction] = None, *args, **kwargs) -> NoReturn:
+    def error(self, message: str, format_fn: Optional[FormatFunction] = None, fn_args: Optional[Tuple] = None,
+              fn_kwargs: Optional[Dict] = None, *args, **kwargs) -> NoReturn:
         raise NotImplementedError
 
-    def warning(self, message: str, format_fn: Optional[FormatFunction] = None, *args, **kwargs) -> NoReturn:
+    def warning(self, message: str, format_fn: Optional[FormatFunction] = None, fn_args: Optional[Tuple] = None,
+                fn_kwargs: Optional[Dict] = None, *args, **kwargs) -> NoReturn:
         raise NotImplementedError
 
-    def info(self, message: str, format_fn: Optional[FormatFunction] = None, *args, **kwargs) -> NoReturn:
+    def info(self, message: str, format_fn: Optional[FormatFunction] = None, fn_args: Optional[Tuple] = None,
+             fn_kwargs: Optional[Dict] = None, *args, **kwargs) -> NoReturn:
         raise NotImplementedError
 
-    def debug(self, message: str, format_fn: Optional[FormatFunction] = None, *args, **kwargs) -> NoReturn:
+    def debug(self, message: str, format_fn: Optional[FormatFunction] = None, fn_args: Optional[Tuple] = None,
+              fn_kwargs: Optional[Dict] = None, *args, **kwargs) -> NoReturn:
         raise NotImplementedError
 
 
@@ -76,30 +85,35 @@ class Notification(NotificationBase):
     def _send(self, message: str, *args, **kwargs) -> NoReturn:
         raise NotImplementedError
 
-    def message(self, message: str, format_fn: Optional[FormatFunction] = None, *args, **kwargs) -> NoReturn:
+    def message(self, message: str, format_fn: Optional[FormatFunction] = None, fn_args: Optional[Tuple] = None,
+                fn_kwargs: Optional[Dict] = None, *args, **kwargs) -> NoReturn:
         if self.settings.message:
-            msg = self._format(message, format_fn, *args, **kwargs)
-            [_.message(msg, *args, **kwargs) for _ in self.services.values()]
+            [_.message(self._format(_, message, format_fn, fn_args, fn_kwargs, *args, **kwargs), *args, **kwargs) for _
+             in self.services.values()]
 
-    def error(self, message: str, format_fn: Optional[FormatFunction] = None, *args, **kwargs) -> NoReturn:
+    def error(self, message: str, format_fn: Optional[FormatFunction] = None, fn_args: Optional[Tuple] = None,
+              fn_kwargs: Optional[Dict] = None, *args, **kwargs) -> NoReturn:
         if self.settings.error:
-            msg = self._format(message, *args, **kwargs)
-            [_.error(msg, *args, **kwargs) for _ in self.services.values()]
+            [_.error(self._format(_, message, format_fn, fn_args, fn_kwargs, *args, **kwargs), *args, **kwargs) for _ in
+             self.services.values()]
 
-    def warning(self, message: str, format_fn: Optional[FormatFunction] = None, *args, **kwargs) -> NoReturn:
+    def warning(self, message: str, format_fn: Optional[FormatFunction] = None, fn_args: Optional[Tuple] = None,
+                fn_kwargs: Optional[Dict] = None, *args, **kwargs) -> NoReturn:
         if self.settings.warning:
-            msg = self._format(message, *args, **kwargs)
-            [_.warning(msg, *args, **kwargs) for _ in self.services.values()]
+            [_.warning(self._format(_, message, format_fn, fn_args, fn_kwargs, *args, **kwargs), *args, **kwargs) for _
+             in self.services.values()]
 
-    def info(self, message: str, format_fn: Optional[FormatFunction] = None, *args, **kwargs) -> NoReturn:
+    def info(self, message: str, format_fn: Optional[FormatFunction] = None, fn_args: Optional[Tuple] = None,
+             fn_kwargs: Optional[Dict] = None, *args, **kwargs) -> NoReturn:
         if self.settings.info:
-            msg = self._format(message, *args, **kwargs)
-            [_.info(msg, *args, **kwargs) for _ in self.services.values()]
+            [_.info(self._format(_, message, format_fn, fn_args, fn_kwargs, *args, **kwargs), *args, **kwargs) for _ in
+             self.services.values()]
 
-    def debug(self, message: str, format_fn: Optional[FormatFunction] = None, *args, **kwargs) -> NoReturn:
+    def debug(self, message: str, format_fn: Optional[FormatFunction] = None, fn_args: Optional[Tuple] = None,
+              fn_kwargs: Optional[Dict] = None, *args, **kwargs) -> NoReturn:
         if self.settings.debug:
-            msg = self._format(message, *args, **kwargs)
-            [_.debug(msg, *args, **kwargs) for _ in self.services.values()]
+            [_.debug(self._format(_, message, format_fn, fn_args, fn_kwargs, *args, **kwargs), *args, **kwargs) for _ in
+             self.services.values()]
 
 
 class LoggerNotification(NotificationBase):
@@ -111,29 +125,34 @@ class LoggerNotification(NotificationBase):
     def _send(self, message: str, *args, **kwargs) -> NoReturn:
         raise NotImplementedError
 
-    def message(self, message: str, format_fn: Optional[FormatFunction] = None, *args, **kwargs) -> NoReturn:
+    def message(self, message: str, format_fn: Optional[FormatFunction] = None, fn_args: Optional[Tuple] = None,
+                fn_kwargs: Optional[Dict] = None, *args, **kwargs) -> NoReturn:
         if self.settings.message:
-            msg = self._format(message, format_fn, *args, **kwargs)
+            msg = self._format(self, message, format_fn, fn_args, fn_kwargs, *args, **kwargs)
             self.logger.warning(msg, *args, **kwargs)
 
-    def error(self, message: str, format_fn: Optional[FormatFunction] = None, *args, **kwargs) -> NoReturn:
+    def error(self, message: str, format_fn: Optional[FormatFunction] = None, fn_args: Optional[Tuple] = None,
+              fn_kwargs: Optional[Dict] = None, *args, **kwargs) -> NoReturn:
         if self.settings.error:
-            msg = self._format(message, format_fn, *args, **kwargs)
+            msg = self._format(self, message, format_fn, fn_args, fn_kwargs, *args, **kwargs)
             self.logger.error(msg, *args, **kwargs)
 
-    def warning(self, message: str, format_fn: Optional[FormatFunction] = None, *args, **kwargs) -> NoReturn:
+    def warning(self, message: str, format_fn: Optional[FormatFunction] = None, fn_args: Optional[Tuple] = None,
+                fn_kwargs: Optional[Dict] = None, *args, **kwargs) -> NoReturn:
         if self.settings.warning:
-            msg = self._format(message, format_fn, *args, **kwargs)
+            msg = self._format(self, message, format_fn, fn_args, fn_kwargs, *args, **kwargs)
             self.logger.warning(msg, *args, **kwargs)
 
-    def info(self, message: str, format_fn: Optional[FormatFunction] = None, *args, **kwargs) -> NoReturn:
+    def info(self, message: str, format_fn: Optional[FormatFunction] = None, fn_args: Optional[Tuple] = None,
+             fn_kwargs: Optional[Dict] = None, *args, **kwargs) -> NoReturn:
         if self.settings.info:
-            msg = self._format(message, format_fn, *args, **kwargs)
+            msg = self._format(self, message, format_fn, fn_args, fn_kwargs, *args, **kwargs)
             self.logger.info(msg, *args, *kwargs)
 
-    def debug(self, message: str, format_fn: Optional[FormatFunction] = None, *args, **kwargs) -> NoReturn:
+    def debug(self, message: str, format_fn: Optional[FormatFunction] = None, fn_args: Optional[Tuple] = None,
+              fn_kwargs: Optional[Dict] = None, *args, **kwargs) -> NoReturn:
         if self.settings.debug:
-            msg = self._format(message, format_fn, *args, **kwargs)
+            msg = self._format(self, message, format_fn, fn_args, fn_kwargs, *args, **kwargs)
             self.logger.debug(msg, *args, **kwargs)
 
 
@@ -144,29 +163,34 @@ class ChatNotification(NotificationBase):
     def _send(self, message: str, *args, **kwargs):
         raise NotImplementedError
 
-    def message(self, message: str, format_fn: Optional[FormatFunction] = None, *args, **kwargs):
+    def message(self, message: str, format_fn: Optional[FormatFunction] = None, fn_args: Optional[Tuple] = None,
+                fn_kwargs: Optional[Dict] = None, *args, **kwargs) -> NoReturn:
         if self.settings.message:
-            msg = self._format(message, *args, **kwargs)
+            msg = self._format(self, message, format_fn, fn_args, fn_kwargs, *args, **kwargs)
             self._send(msg, *args, **kwargs)
 
-    def error(self, message: str, format_fn: Optional[FormatFunction] = None, *args, **kwargs):
+    def error(self, message: str, format_fn: Optional[FormatFunction] = None, fn_args: Optional[Tuple] = None,
+              fn_kwargs: Optional[Dict] = None, *args, **kwargs) -> NoReturn:
         if self.settings.error:
-            msg = self._format(message, *args, **kwargs)
+            msg = self._format(self, message, format_fn, fn_args, fn_kwargs, *args, **kwargs)
             self._send(msg, *args, **kwargs)
 
-    def warning(self, message: str, format_fn: Optional[FormatFunction] = None, *args, **kwargs):
+    def warning(self, message: str, format_fn: Optional[FormatFunction] = None, fn_args: Optional[Tuple] = None,
+                fn_kwargs: Optional[Dict] = None, *args, **kwargs) -> NoReturn:
         if self.settings.warning:
-            msg = self._format(message, *args, **kwargs)
+            msg = self._format(self, message, format_fn, fn_args, fn_kwargs, *args, **kwargs)
             self._send(msg, *args, **kwargs)
 
-    def info(self, message: str, format_fn: Optional[FormatFunction] = None, *args, **kwargs):
+    def info(self, message: str, format_fn: Optional[FormatFunction] = None, fn_args: Optional[Tuple] = None,
+             fn_kwargs: Optional[Dict] = None, *args, **kwargs) -> NoReturn:
         if self.settings.info:
-            msg = self._format(message, *args, **kwargs)
+            msg = self._format(self, message, format_fn, fn_args, fn_kwargs, *args, **kwargs)
             self._send(msg, *args, **kwargs)
 
-    def debug(self, message: str, format_fn: Optional[FormatFunction] = None, *args, **kwargs):
+    def debug(self, message: str, format_fn: Optional[FormatFunction] = None, fn_args: Optional[Tuple] = None,
+              fn_kwargs: Optional[Dict] = None, *args, **kwargs) -> NoReturn:
         if self.settings.debug:
-            msg = self._format(message, *args, **kwargs)
+            msg = self._format(self, message, format_fn, fn_args, fn_kwargs, *args, **kwargs)
             self._send(msg, *args, **kwargs)
 
 
@@ -181,8 +205,9 @@ class DiscordNotification(ChatNotification):
         self.settings = settings
 
     def _send(self, message: str, *args, **kwargs):
-        self.send_fn.set_content(message)
-        self.send_fn.execute()
+        if message != '':
+            self.send_fn.set_content(message)
+            self.send_fn.execute()
 
 
 class TelegramNotification(ChatNotification):
@@ -204,4 +229,5 @@ class TelegramNotification(ChatNotification):
         self.settings = settings
 
     def _send(self, message: str, *args, **kwargs):
-        self.send_fn.send_message(message)
+        if message != '':
+            self.send_fn.send_message(message)

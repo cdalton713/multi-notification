@@ -4,7 +4,7 @@ from typing import Protocol
 
 
 class FormatFunction(Protocol):
-    def __call__(self, *args, **kwargs) -> str:
+    def __call__(self, service, *args, **kwargs) -> str:
         ...
 
 
