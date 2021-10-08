@@ -24,7 +24,7 @@ class NotificationBase:
         else:
             return self.default_format_fn(message, *args, **kwargs)
 
-    def set_default_format_fn(self, format_fn: Callable[[...], str]) -> NoReturn:
+    def set_default_format_fn(self, format_fn: Callable) -> NoReturn:
         self.default_format_fn = format_fn
 
     def clear_default_format_fn(self) -> NoReturn:
